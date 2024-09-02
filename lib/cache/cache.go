@@ -43,6 +43,7 @@ import (
 	dbobjectv1 "github.com/gravitational/teleport/api/gen/proto/go/teleport/dbobject/v1"
 	kubewaitingcontainerpb "github.com/gravitational/teleport/api/gen/proto/go/teleport/kubewaitingcontainer/v1"
 	notificationsv1 "github.com/gravitational/teleport/api/gen/proto/go/teleport/notifications/v1"
+	userintegrationtasksv1 "github.com/gravitational/teleport/api/gen/proto/go/teleport/userintegrationtasks/v1"
 	userprovisioningpb "github.com/gravitational/teleport/api/gen/proto/go/teleport/userprovisioning/v2"
 	userspb "github.com/gravitational/teleport/api/gen/proto/go/teleport/users/v1"
 	"github.com/gravitational/teleport/api/internalutils/stream"
@@ -185,6 +186,7 @@ func ForAuth(cfg Config) Config {
 		{Kind: types.KindAccessGraphSettings},
 		{Kind: types.KindSPIFFEFederation},
 		{Kind: types.KindStaticHostUser},
+		{Kind: types.KindUserIntegrationTask},
 	}
 	cfg.QueueSize = defaults.AuthQueueSize
 	// We don't want to enable partial health for auth cache because auth uses an event stream
@@ -237,6 +239,7 @@ func ForProxy(cfg Config) Config {
 		{Kind: types.KindSecurityReport},
 		{Kind: types.KindSecurityReportState},
 		{Kind: types.KindKubeWaitingContainer},
+		{Kind: types.KindUserIntegrationTask},
 	}
 	cfg.QueueSize = defaults.ProxyQueueSize
 	return cfg
@@ -402,6 +405,7 @@ func ForDiscovery(cfg Config) Config {
 		{Kind: types.KindApp},
 		{Kind: types.KindDiscoveryConfig},
 		{Kind: types.KindIntegration},
+		{Kind: types.KindUserIntegrationTask},
 		{Kind: types.KindProxy},
 	}
 	cfg.QueueSize = defaults.DiscoveryQueueSize
@@ -513,6 +517,7 @@ type Cache struct {
 	userGroupsCache              services.UserGroups
 	oktaCache                    services.Okta
 	integrationsCache            services.Integrations
+	userIntegrationTasksCache    services.UserIntegrationTasks
 	discoveryConfigsCache        services.DiscoveryConfigs
 	headlessAuthenticationsCache services.HeadlessAuthenticationService
 	secReportsCache              services.SecReports
@@ -687,6 +692,8 @@ type Config struct {
 	DiscoveryConfigs services.DiscoveryConfigs
 	// UserLoginStates is the user login state service.
 	UserLoginStates services.UserLoginStates
+	// UserIntegrationTasks is the user integration tasks service.
+	UserIntegrationTasks services.UserIntegrationTasks
 	// SecEvents is the security report service.
 	SecReports services.SecReports
 	// AccessLists is the access lists service.
@@ -876,6 +883,12 @@ func New(config Config) (*Cache, error) {
 		return nil, trace.Wrap(err)
 	}
 
+	userIntegrationTasksCache, err := local.NewUserIntegrationTasksService(config.Backend)
+	if err != nil {
+		cancel()
+		return nil, trace.Wrap(err)
+	}
+
 	discoveryConfigsCache, err := local.NewDiscoveryConfigService(config.Backend)
 	if err != nil {
 		cancel()
@@ -978,6 +991,7 @@ func New(config Config) (*Cache, error) {
 		userGroupsCache:              userGroupsCache,
 		oktaCache:                    oktaCache,
 		integrationsCache:            integrationsCache,
+		userIntegrationTasksCache:    userIntegrationTasksCache,
 		discoveryConfigsCache:        discoveryConfigsCache,
 		headlessAuthenticationsCache: local.NewIdentityService(config.Backend),
 		secReportsCache:              secReportsCache,
@@ -2863,6 +2877,32 @@ func (c *Cache) GetIntegration(ctx context.Context, name string) (types.Integrat
 	}
 	defer rg.Release()
 	return rg.reader.GetIntegration(ctx, name)
+}
+
+// ListUserIntegrationTasks returns a list of UserIntegrationTask resources.
+func (c *Cache) ListUserIntegrationTasks(ctx context.Context, pageSize int64, nextKey string) ([]*userintegrationtasksv1.UserIntegrationTask, string, error) {
+	ctx, span := c.Tracer.Start(ctx, "cache/ListUserIntegrationTasks")
+	defer span.End()
+
+	rg, err := readCollectionCache(c, c.collections.userIntegrationTasks)
+	if err != nil {
+		return nil, "", trace.Wrap(err)
+	}
+	defer rg.Release()
+	return rg.reader.ListUserIntegrationTasks(ctx, pageSize, nextKey)
+}
+
+// GetUserIntegrationTask returns the specified UserIntegrationTask resource.
+func (c *Cache) GetUserIntegrationTask(ctx context.Context, name string) (*userintegrationtasksv1.UserIntegrationTask, error) {
+	ctx, span := c.Tracer.Start(ctx, "cache/GetUserIntegrationTask")
+	defer span.End()
+
+	rg, err := readCollectionCache(c, c.collections.userIntegrationTasks)
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+	defer rg.Release()
+	return rg.reader.GetUserIntegrationTask(ctx, name)
 }
 
 // ListDiscoveryConfigs returns a paginated list of all DiscoveryConfig resources.

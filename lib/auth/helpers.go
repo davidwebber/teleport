@@ -347,6 +347,7 @@ func NewTestAuthServer(cfg TestAuthServerConfig) (*TestAuthServer, error) {
 			StaticHostUsers:         svces.StaticHostUser,
 			Trust:                   svces.TrustInternal,
 			UserGroups:              svces.UserGroups,
+			UserIntegrationTasks:    svces.UserIntegrationTasks,
 			UserLoginStates:         svces.UserLoginStates,
 			Users:                   svces.Identity,
 			WebSession:              svces.Identity.WebSessions(),

@@ -315,6 +315,12 @@ func NewServer(cfg *InitConfig, opts ...ServerOption) (*Server, error) {
 			return nil, trace.Wrap(err)
 		}
 	}
+	if cfg.UserIntegrationTasks == nil {
+		cfg.UserIntegrationTasks, err = local.NewUserIntegrationTasksService(cfg.Backend)
+		if err != nil {
+			return nil, trace.Wrap(err)
+		}
+	}
 	if cfg.DiscoveryConfigs == nil {
 		cfg.DiscoveryConfigs, err = local.NewDiscoveryConfigService(cfg.Backend)
 		if err != nil {
@@ -430,6 +436,7 @@ func NewServer(cfg *InitConfig, opts ...ServerOption) (*Server, error) {
 		SessionTrackerService:     cfg.SessionTrackerService,
 		ConnectionsDiagnostic:     cfg.ConnectionsDiagnostic,
 		Integrations:              cfg.Integrations,
+		UserIntegrationTasks:      cfg.UserIntegrationTasks,
 		DiscoveryConfigs:          cfg.DiscoveryConfigs,
 		Okta:                      cfg.Okta,
 		AccessLists:               cfg.AccessLists,
@@ -630,6 +637,7 @@ type Services struct {
 	services.StatusInternal
 	services.Integrations
 	services.IntegrationsTokenGenerator
+	services.UserIntegrationTasks
 	services.DiscoveryConfigs
 	services.Okta
 	services.AccessLists

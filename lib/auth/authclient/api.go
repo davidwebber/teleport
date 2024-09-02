@@ -33,6 +33,7 @@ import (
 	integrationpb "github.com/gravitational/teleport/api/gen/proto/go/teleport/integration/v1"
 	kubewaitingcontainerpb "github.com/gravitational/teleport/api/gen/proto/go/teleport/kubewaitingcontainer/v1"
 	machineidv1 "github.com/gravitational/teleport/api/gen/proto/go/teleport/machineid/v1"
+	userintegrationtasksv1 "github.com/gravitational/teleport/api/gen/proto/go/teleport/userintegrationtasks/v1"
 	userprovisioningpb "github.com/gravitational/teleport/api/gen/proto/go/teleport/userprovisioning/v2"
 	userspb "github.com/gravitational/teleport/api/gen/proto/go/teleport/users/v1"
 	"github.com/gravitational/teleport/api/types"
@@ -795,6 +796,9 @@ type DiscoveryAccessPoint interface {
 
 	// UpdateDiscoveryConfigStatus updates the status of a discovery config.
 	UpdateDiscoveryConfigStatus(ctx context.Context, name string, status discoveryconfig.Status) (*discoveryconfig.DiscoveryConfig, error)
+
+	// UpsertUserIntegrationTask creates or updates an User Integration Task
+	UpsertUserIntegrationTask(ctx context.Context, req *userintegrationtasksv1.UserIntegrationTask) (*userintegrationtasksv1.UserIntegrationTask, error)
 }
 
 // ReadOktaAccessPoint is a read only API interface to be
@@ -1163,6 +1167,11 @@ type Cache interface {
 	// IntegrationsGetter defines read/list methods for integrations.
 	services.IntegrationsGetter
 
+	// GetUserIntegrationTask returns the user integration tasks resource by name.
+	GetUserIntegrationTask(ctx context.Context, name string) (*userintegrationtasksv1.UserIntegrationTask, error)
+	// ListUserIntegrationTasks returns the user integration tasks resources.
+	ListUserIntegrationTasks(ctx context.Context, pageSize int64, nextToken string) ([]*userintegrationtasksv1.UserIntegrationTask, string, error)
+
 	// NotificationGetter defines list methods for notifications.
 	services.NotificationGetter
 
@@ -1422,6 +1431,11 @@ func (w *DiscoveryWrapper) Ping(ctx context.Context) (proto.PingResponse, error)
 // UpdateDiscoveryConfigStatus updates the status of a discovery config.
 func (w *DiscoveryWrapper) UpdateDiscoveryConfigStatus(ctx context.Context, name string, status discoveryconfig.Status) (*discoveryconfig.DiscoveryConfig, error) {
 	return w.NoCache.UpdateDiscoveryConfigStatus(ctx, name, status)
+}
+
+// UpserUserIntegrationTask creates or updates an User Integration Task.
+func (w *DiscoveryWrapper) UpsertUserIntegrationTask(ctx context.Context, req *userintegrationtasksv1.UserIntegrationTask) (*userintegrationtasksv1.UserIntegrationTask, error) {
+	return w.NoCache.UpsertUserIntegrationTask(ctx, req)
 }
 
 // Close closes all associated resources

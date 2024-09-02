@@ -35,6 +35,7 @@ import (
 	kubewaitingcontainerpb "github.com/gravitational/teleport/api/gen/proto/go/teleport/kubewaitingcontainer/v1"
 	machineidv1 "github.com/gravitational/teleport/api/gen/proto/go/teleport/machineid/v1"
 	notificationsv1 "github.com/gravitational/teleport/api/gen/proto/go/teleport/notifications/v1"
+	userintegrationtasksv1 "github.com/gravitational/teleport/api/gen/proto/go/teleport/userintegrationtasks/v1"
 	userprovisioningpb "github.com/gravitational/teleport/api/gen/proto/go/teleport/userprovisioning/v2"
 	userspb "github.com/gravitational/teleport/api/gen/proto/go/teleport/users/v1"
 	"github.com/gravitational/teleport/api/types"
@@ -193,6 +194,11 @@ type crownjewelsGetter interface {
 	GetCrownJewel(ctx context.Context, name string) (*crownjewelv1.CrownJewel, error)
 }
 
+type userIntegrationTasksGetter interface {
+	ListUserIntegrationTasks(ctx context.Context, pageSize int64, nextToken string) ([]*userintegrationtasksv1.UserIntegrationTask, string, error)
+	GetUserIntegrationTask(ctx context.Context, name string) (*userintegrationtasksv1.UserIntegrationTask, error)
+}
+
 // cacheCollections is a registry of resource collections used by Cache.
 type cacheCollections struct {
 	// byKind is a map of registered collections by resource Kind/SubKind
@@ -221,6 +227,7 @@ type cacheCollections struct {
 	discoveryConfigs         collectionReader[services.DiscoveryConfigsGetter]
 	installers               collectionReader[installerGetter]
 	integrations             collectionReader[services.IntegrationsGetter]
+	userIntegrationTasks     collectionReader[userIntegrationTasksGetter]
 	crownJewels              collectionReader[crownjewelsGetter]
 	kubeClusters             collectionReader[kubernetesClusterGetter]
 	kubeWaitingContainers    collectionReader[kubernetesWaitingContainerGetter]
@@ -653,6 +660,15 @@ func setupCollections(c *Cache, watches []types.WatchKind) (*cacheCollections, e
 				watch: watch,
 			}
 			collections.byKind[resourceKind] = collections.integrations
+		case types.KindUserIntegrationTask:
+			if c.UserIntegrationTasks == nil {
+				return nil, trace.BadParameter("missing parameter user integration tasks")
+			}
+			collections.userIntegrationTasks = &genericCollection[*userintegrationtasksv1.UserIntegrationTask, userIntegrationTasksGetter, userIntegrationTasksExecutor]{
+				cache: c,
+				watch: watch,
+			}
+			collections.byKind[resourceKind] = collections.userIntegrationTasks
 		case types.KindDiscoveryConfig:
 			if c.DiscoveryConfigs == nil {
 				return nil, trace.BadParameter("missing parameter DiscoveryConfigs")
@@ -2430,6 +2446,51 @@ func (crownJewelsExecutor) getReader(cache *Cache, cacheOK bool) crownjewelsGett
 }
 
 var _ executor[*crownjewelv1.CrownJewel, crownjewelsGetter] = crownJewelsExecutor{}
+
+type userIntegrationTasksExecutor struct{}
+
+func (userIntegrationTasksExecutor) getAll(ctx context.Context, cache *Cache, loadSecrets bool) ([]*userintegrationtasksv1.UserIntegrationTask, error) {
+	var resources []*userintegrationtasksv1.UserIntegrationTask
+	var nextToken string
+	for {
+		var page []*userintegrationtasksv1.UserIntegrationTask
+		var err error
+		page, nextToken, err = cache.UserIntegrationTasks.ListUserIntegrationTasks(ctx, 0 /* page size */, nextToken)
+		if err != nil {
+			return nil, trace.Wrap(err)
+		}
+		resources = append(resources, page...)
+
+		if nextToken == "" {
+			break
+		}
+	}
+	return resources, nil
+}
+
+func (userIntegrationTasksExecutor) upsert(ctx context.Context, cache *Cache, resource *userintegrationtasksv1.UserIntegrationTask) error {
+	_, err := cache.userIntegrationTasksCache.UpsertUserIntegrationTask(ctx, resource)
+	return trace.Wrap(err)
+}
+
+func (userIntegrationTasksExecutor) deleteAll(ctx context.Context, cache *Cache) error {
+	return cache.userIntegrationTasksCache.DeleteAllUserIntegrationTasks(ctx)
+}
+
+func (userIntegrationTasksExecutor) delete(ctx context.Context, cache *Cache, resource types.Resource) error {
+	return cache.userIntegrationTasksCache.DeleteUserIntegrationTask(ctx, resource.GetName())
+}
+
+func (userIntegrationTasksExecutor) isSingleton() bool { return false }
+
+func (userIntegrationTasksExecutor) getReader(cache *Cache, cacheOK bool) userIntegrationTasksGetter {
+	if cacheOK {
+		return cache.userIntegrationTasksCache
+	}
+	return cache.Config.UserIntegrationTasks
+}
+
+var _ executor[*userintegrationtasksv1.UserIntegrationTask, userIntegrationTasksGetter] = userIntegrationTasksExecutor{}
 
 //nolint:revive // Because we want this to be IdP.
 type samlIdPServiceProvidersExecutor struct{}

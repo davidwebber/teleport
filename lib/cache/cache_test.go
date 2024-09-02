@@ -50,6 +50,7 @@ import (
 	kubewaitingcontainerpb "github.com/gravitational/teleport/api/gen/proto/go/teleport/kubewaitingcontainer/v1"
 	labelv1 "github.com/gravitational/teleport/api/gen/proto/go/teleport/label/v1"
 	notificationsv1 "github.com/gravitational/teleport/api/gen/proto/go/teleport/notifications/v1"
+	userintegrationtasksv1 "github.com/gravitational/teleport/api/gen/proto/go/teleport/userintegrationtasks/v1"
 	userprovisioningpb "github.com/gravitational/teleport/api/gen/proto/go/teleport/userprovisioning/v2"
 	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/teleport/api/types/accesslist"
@@ -120,6 +121,7 @@ type testPack struct {
 	userGroups              services.UserGroups
 	okta                    services.Okta
 	integrations            services.Integrations
+	userIntegrationTasks    services.UserIntegrationTasks
 	discoveryConfigs        services.DiscoveryConfigs
 	userLoginStates         services.UserLoginStates
 	secReports              services.SecReports
@@ -296,6 +298,12 @@ func newPackWithoutCache(dir string, opts ...packOption) (*testPack, error) {
 	}
 	p.integrations = igSvc
 
+	userIntegrationTasksSvc, err := local.NewUserIntegrationTasksService(p.backend)
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+	p.userIntegrationTasks = userIntegrationTasksSvc
+
 	dcSvc, err := local.NewDiscoveryConfigService(p.backend)
 	if err != nil {
 		return nil, trace.Wrap(err)
@@ -397,6 +405,7 @@ func newPack(dir string, setupConfig func(c Config) Config, opts ...packOption) 
 		UserGroups:              p.userGroups,
 		Okta:                    p.okta,
 		Integrations:            p.integrations,
+		UserIntegrationTasks:    p.userIntegrationTasks,
 		DiscoveryConfigs:        p.discoveryConfigs,
 		UserLoginStates:         p.userLoginStates,
 		SecReports:              p.secReports,
@@ -803,6 +812,7 @@ func TestCompletenessInit(t *testing.T) {
 			UserGroups:              p.userGroups,
 			Okta:                    p.okta,
 			Integrations:            p.integrations,
+			UserIntegrationTasks:    p.userIntegrationTasks,
 			DiscoveryConfigs:        p.discoveryConfigs,
 			UserLoginStates:         p.userLoginStates,
 			SecReports:              p.secReports,
@@ -882,6 +892,7 @@ func TestCompletenessReset(t *testing.T) {
 		UserGroups:              p.userGroups,
 		Okta:                    p.okta,
 		Integrations:            p.integrations,
+		UserIntegrationTasks:    p.userIntegrationTasks,
 		DiscoveryConfigs:        p.discoveryConfigs,
 		UserLoginStates:         p.userLoginStates,
 		SecReports:              p.secReports,
@@ -1087,6 +1098,7 @@ func TestListResources_NodesTTLVariant(t *testing.T) {
 		UserGroups:              p.userGroups,
 		Okta:                    p.okta,
 		Integrations:            p.integrations,
+		UserIntegrationTasks:    p.userIntegrationTasks,
 		DiscoveryConfigs:        p.discoveryConfigs,
 		UserLoginStates:         p.userLoginStates,
 		SecReports:              p.secReports,
@@ -1177,6 +1189,7 @@ func initStrategy(t *testing.T) {
 		UserGroups:              p.userGroups,
 		Okta:                    p.okta,
 		Integrations:            p.integrations,
+		UserIntegrationTasks:    p.userIntegrationTasks,
 		DiscoveryConfigs:        p.discoveryConfigs,
 		UserLoginStates:         p.userLoginStates,
 		SecReports:              p.secReports,
@@ -2262,6 +2275,44 @@ func TestIntegrations(t *testing.T) {
 	})
 }
 
+// TestUserIntegrationTasks tests that CRUD operations on user notification resources are
+// replicated from the backend to the cache.
+func TestUserIntegrationTasks(t *testing.T) {
+	t.Parallel()
+
+	p := newTestPack(t, ForAuth)
+	t.Cleanup(p.Close)
+
+	testResources153(t, p, testFuncs153[*userintegrationtasksv1.UserIntegrationTask]{
+		newResource: func(name string) (*userintegrationtasksv1.UserIntegrationTask, error) {
+			return newUserIntegrationTasks(t, name), nil
+		},
+		create: func(ctx context.Context, item *userintegrationtasksv1.UserIntegrationTask) error {
+			_, err := p.userIntegrationTasks.CreateUserIntegrationTask(ctx, item)
+			return trace.Wrap(err)
+		},
+		list: func(ctx context.Context) ([]*userintegrationtasksv1.UserIntegrationTask, error) {
+			items, _, err := p.userIntegrationTasks.ListUserIntegrationTasks(ctx, 0, "")
+			return items, trace.Wrap(err)
+		},
+		cacheList: func(ctx context.Context) ([]*userintegrationtasksv1.UserIntegrationTask, error) {
+			items, _, err := p.userIntegrationTasks.ListUserIntegrationTasks(ctx, 0, "")
+			return items, trace.Wrap(err)
+		},
+		deleteAll: p.userIntegrationTasks.DeleteAllUserIntegrationTasks,
+	})
+}
+
+func newUserIntegrationTasks(t *testing.T, name string) *userintegrationtasksv1.UserIntegrationTask {
+	t.Helper()
+
+	return &userintegrationtasksv1.UserIntegrationTask{
+		Metadata: &headerv1.Metadata{
+			Name: name,
+		},
+	}
+}
+
 // TestDiscoveryConfig tests that CRUD operations on DiscoveryConfig resources are
 // replicated from the backend to the cache.
 func TestDiscoveryConfig(t *testing.T) {
@@ -3297,6 +3348,7 @@ func TestCacheWatchKindExistsInEvents(t *testing.T) {
 		types.KindAccessGraphSettings:     types.Resource153ToLegacy(newAccessGraphSettings(t)),
 		types.KindSPIFFEFederation:        types.Resource153ToLegacy(newSPIFFEFederation("test")),
 		types.KindStaticHostUser:          types.Resource153ToLegacy(newStaticHostUser(t, "test")),
+		types.KindUserIntegrationTask:     types.Resource153ToLegacy(newUserIntegrationTasks(t, "test")),
 	}
 
 	for name, cfg := range cases {

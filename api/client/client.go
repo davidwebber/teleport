@@ -60,6 +60,7 @@ import (
 	"github.com/gravitational/teleport/api/client/scim"
 	"github.com/gravitational/teleport/api/client/secreport"
 	statichostuserclient "github.com/gravitational/teleport/api/client/statichostuser"
+	userintegrationtaskapi "github.com/gravitational/teleport/api/client/userintegrationtask"
 	"github.com/gravitational/teleport/api/client/userloginstate"
 	"github.com/gravitational/teleport/api/constants"
 	"github.com/gravitational/teleport/api/defaults"
@@ -86,6 +87,7 @@ import (
 	samlidppb "github.com/gravitational/teleport/api/gen/proto/go/teleport/samlidp/v1"
 	secreportsv1 "github.com/gravitational/teleport/api/gen/proto/go/teleport/secreports/v1"
 	trustpb "github.com/gravitational/teleport/api/gen/proto/go/teleport/trust/v1"
+	userintegrationtaskv1 "github.com/gravitational/teleport/api/gen/proto/go/teleport/userintegrationtasks/v1"
 	userloginstatev1 "github.com/gravitational/teleport/api/gen/proto/go/teleport/userloginstate/v1"
 	userprovisioningpb "github.com/gravitational/teleport/api/gen/proto/go/teleport/userprovisioning/v2"
 	userspb "github.com/gravitational/teleport/api/gen/proto/go/teleport/users/v1"
@@ -4665,6 +4667,14 @@ func (c *Client) CrownJewelServiceClient() *crownjewelapi.Client {
 // (as per the default gRPC behavior).
 func (c *Client) UserLoginStateClient() *userloginstate.Client {
 	return userloginstate.NewClient(userloginstatev1.NewUserLoginStateServiceClient(c.conn))
+}
+
+// UserIntegrationTasksServiceClient returns a UserIntegrationTask client.
+// Clients connecting to older Teleport versions, still get a UserIntegrationTask client
+// when calling this method, but all RPCs will return "not implemented" errors
+// (as per the default gRPC behavior).
+func (c *Client) UserIntegrationTasksServiceClient() *userintegrationtaskapi.Client {
+	return userintegrationtaskapi.NewClient(userintegrationtaskv1.NewUserIntegrationTaskServiceClient(c.conn))
 }
 
 // GetCertAuthority retrieves a CA by type and domain.

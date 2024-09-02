@@ -36,6 +36,7 @@ import (
 	"github.com/gravitational/teleport/api/client/externalauditstorage"
 	"github.com/gravitational/teleport/api/client/proto"
 	"github.com/gravitational/teleport/api/client/secreport"
+	"github.com/gravitational/teleport/api/client/userintegrationtask"
 	apidefaults "github.com/gravitational/teleport/api/defaults"
 	accessgraphsecretsv1pb "github.com/gravitational/teleport/api/gen/proto/go/teleport/accessgraph/v1"
 	clusterconfigpb "github.com/gravitational/teleport/api/gen/proto/go/teleport/clusterconfig/v1"
@@ -660,6 +661,11 @@ func (c *Client) AccessGraphSecretsScannerClient() accessgraphsecretsv1pb.Secret
 
 func (c *Client) IntegrationAWSOIDCClient() integrationv1.AWSOIDCServiceClient {
 	return integrationv1.NewAWSOIDCServiceClient(c.APIClient.GetConnection())
+}
+
+// UserIntegrationTasksClient returns a client for managing User Integration Task resources.
+func (c *Client) UserIntegrationTasksClient() services.UserIntegrationTasks {
+	return c.APIClient.UserIntegrationTasksServiceClient()
 }
 
 func (c *Client) NotificationServiceClient() notificationsv1.NotificationServiceClient {
@@ -1604,6 +1610,9 @@ type ClientI interface {
 
 	// IntegrationAWSOIDCClient returns a client to the Integration AWS OIDC gRPC service.
 	IntegrationAWSOIDCClient() integrationv1.AWSOIDCServiceClient
+
+	// UserIntegrationTasksServiceClient returns an User Integration Task service client.
+	UserIntegrationTasksServiceClient() *userintegrationtask.Client
 
 	// NewKeepAliver returns a new instance of keep aliver
 	NewKeepAliver(ctx context.Context) (types.KeepAliver, error)

@@ -37,6 +37,7 @@ import (
 	devicepb "github.com/gravitational/teleport/api/gen/proto/go/teleport/devicetrust/v1"
 	loginrulepb "github.com/gravitational/teleport/api/gen/proto/go/teleport/loginrule/v1"
 	machineidv1pb "github.com/gravitational/teleport/api/gen/proto/go/teleport/machineid/v1"
+	userintegrationtasksv1 "github.com/gravitational/teleport/api/gen/proto/go/teleport/userintegrationtasks/v1"
 	userprovisioningpb "github.com/gravitational/teleport/api/gen/proto/go/teleport/userprovisioning/v2"
 	"github.com/gravitational/teleport/api/gen/proto/go/teleport/vnet/v1"
 	"github.com/gravitational/teleport/api/types"
@@ -1793,4 +1794,38 @@ func printSortedStringSlice(s []string) string {
 	s = slices.Clone(s)
 	slices.Sort(s)
 	return strings.Join(s, ",")
+}
+
+type userIntegrationTaskCollection struct {
+	items []*userintegrationtasksv1.UserIntegrationTask
+}
+
+func (c *userIntegrationTaskCollection) resources() []types.Resource {
+	r := make([]types.Resource, 0, len(c.items))
+	for _, resource := range c.items {
+		r = append(r, types.Resource153ToLegacy(resource))
+	}
+	return r
+}
+
+// writeText formats the user integration tasks into a table and writes them into w.
+// If verbose is disabled, labels column can be truncated to fit into the console.
+func (c *userIntegrationTaskCollection) writeText(w io.Writer, verbose bool) error {
+	var rows [][]string
+	for _, item := range c.items {
+		labels := common.FormatLabels(item.GetMetadata().GetLabels(), verbose)
+		rows = append(rows, []string{item.Metadata.GetName(), labels, item.Spec.GetIntegration(), item.Spec.TaskType, item.Spec.IssueType})
+	}
+	headers := []string{"Name", "Labels", "Integration", "TaskType", "IssueType"}
+	var t asciitable.Table
+	if verbose {
+		t = asciitable.MakeTable(headers, rows...)
+	} else {
+		t = asciitable.MakeTableWithTruncatedColumn(headers, rows, "Node Expression")
+	}
+
+	// stable sort by name.
+	t.SortRowsBy([]int{0}, true)
+	_, err := t.AsBuffer().WriteTo(w)
+	return trace.Wrap(err)
 }

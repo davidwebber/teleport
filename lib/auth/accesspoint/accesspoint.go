@@ -98,6 +98,7 @@ type Config struct {
 	StaticHostUsers         services.StaticHostUser
 	Trust                   services.Trust
 	UserGroups              services.UserGroups
+	UserIntegrationTasks    services.UserIntegrationTasks
 	UserLoginStates         services.UserLoginStates
 	Users                   services.UsersService
 	WebSession              types.WebSessionInterface
@@ -191,6 +192,7 @@ func NewCache(cfg Config) (*cache.Cache, error) {
 		Trust:                   cfg.Trust,
 		UserGroups:              cfg.UserGroups,
 		UserLoginStates:         cfg.UserLoginStates,
+		UserIntegrationTasks:    cfg.UserIntegrationTasks,
 		Users:                   cfg.Users,
 		WebSession:              cfg.WebSession,
 		WebToken:                cfg.WebToken,

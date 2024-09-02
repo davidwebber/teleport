@@ -84,6 +84,8 @@ type UserACL struct {
 	Plugins ResourceAccess `json:"plugins"`
 	// Integrations defines whether the user has access to manage integrations.
 	Integrations ResourceAccess `json:"integrations"`
+	// UserIntegrationTasks defines whether the user has access to manage UserIntegrationTasks.
+	UserIntegrationTasks ResourceAccess `json:"userIntegrationTasks"`
 	// DeviceTrust defines access to device trust.
 	DeviceTrust ResourceAccess `json:"deviceTrust"`
 	// Locks defines access to locking resources.
@@ -198,6 +200,7 @@ func NewUserACL(user types.User, userRoles RoleSet, features proto.Features, des
 	bots := newAccess(userRoles, ctx, types.KindBot)
 	botInstances := newAccess(userRoles, ctx, types.KindBotInstance)
 	crownJewelAccess := newAccess(userRoles, ctx, types.KindCrownJewel)
+	userIntegrationTasksAccess := newAccess(userRoles, ctx, types.KindUserIntegrationTask)
 
 	var auditQuery ResourceAccess
 	var securityReports ResourceAccess
@@ -231,6 +234,7 @@ func NewUserACL(user types.User, userRoles RoleSet, features proto.Features, des
 		License:                 license,
 		Plugins:                 pluginsAccess,
 		Integrations:            integrationsAccess,
+		UserIntegrationTasks:    userIntegrationTasksAccess,
 		DiscoveryConfig:         discoveryConfigsAccess,
 		DeviceTrust:             deviceTrust,
 		Locks:                   lockAccess,

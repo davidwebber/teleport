@@ -50,6 +50,7 @@ import (
 	loginrulepb "github.com/gravitational/teleport/api/gen/proto/go/teleport/loginrule/v1"
 	machineidv1pb "github.com/gravitational/teleport/api/gen/proto/go/teleport/machineid/v1"
 	pluginsv1 "github.com/gravitational/teleport/api/gen/proto/go/teleport/plugins/v1"
+	userintegrationtasksv1 "github.com/gravitational/teleport/api/gen/proto/go/teleport/userintegrationtasks/v1"
 	userprovisioningpb "github.com/gravitational/teleport/api/gen/proto/go/teleport/userprovisioning/v2"
 	"github.com/gravitational/teleport/api/gen/proto/go/teleport/vnet/v1"
 	"github.com/gravitational/teleport/api/internalutils/stream"
@@ -168,6 +169,7 @@ func (rc *ResourceCommand) Initialize(app *kingpin.Application, config *servicec
 		types.KindPlugin:                   rc.createPlugin,
 		types.KindSPIFFEFederation:         rc.createSPIFFEFederation,
 		types.KindStaticHostUser:           rc.createStaticHostUser,
+		types.KindUserIntegrationTask:      rc.createUserIntegrationTask,
 	}
 	rc.UpdateHandlers = map[ResourceKind]ResourceCreateHandler{
 		types.KindUser:                    rc.updateUser,
@@ -184,6 +186,7 @@ func (rc *ResourceCommand) Initialize(app *kingpin.Application, config *servicec
 		types.KindAccessGraphSettings:     rc.updateAccessGraphSettings,
 		types.KindPlugin:                  rc.updatePlugin,
 		types.KindStaticHostUser:          rc.updateStaticHostUser,
+		types.KindUserIntegrationTask:     rc.updateUserIntegrationTask,
 	}
 	rc.config = config
 
@@ -963,6 +966,28 @@ func (rc *ResourceCommand) createCrownJewel(ctx context.Context, client *authcli
 	return nil
 }
 
+func (rc *ResourceCommand) createUserIntegrationTask(ctx context.Context, client *authclient.Client, raw services.UnknownResource) error {
+	resource, err := services.UnmarshalUserIntegrationTask(raw.Raw)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
+	c := client.UserIntegrationTasksServiceClient()
+	if rc.force {
+		if _, err := c.UpsertUserIntegrationTask(ctx, resource); err != nil {
+			return trace.Wrap(err)
+		}
+		fmt.Printf("user integration task %q has been updated\n", resource.GetMetadata().GetName())
+	} else {
+		if _, err := c.CreateUserIntegrationTask(ctx, resource); err != nil {
+			return trace.Wrap(err)
+		}
+		fmt.Printf("user integration task %q has been created\n", resource.GetMetadata().GetName())
+	}
+
+	return nil
+}
+
 func (rc *ResourceCommand) createSPIFFEFederation(ctx context.Context, client *authclient.Client, raw services.UnknownResource) error {
 	in, err := services.UnmarshalSPIFFEFederation(raw.Raw)
 	if err != nil {
@@ -989,6 +1014,18 @@ func (rc *ResourceCommand) updateCrownJewel(ctx context.Context, client *authcli
 		return trace.Wrap(err)
 	}
 	fmt.Printf("crown jewel %q has been updated\n", in.GetMetadata().GetName())
+	return nil
+}
+
+func (rc *ResourceCommand) updateUserIntegrationTask(ctx context.Context, client *authclient.Client, resource services.UnknownResource) error {
+	in, err := services.UnmarshalUserIntegrationTask(resource.Raw)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+	if _, err := client.UserIntegrationTasksServiceClient().UpdateUserIntegrationTask(ctx, in); err != nil {
+		return trace.Wrap(err)
+	}
+	fmt.Printf("user integration task %q has been updated\n", in.GetMetadata().GetName())
 	return nil
 }
 
@@ -1758,6 +1795,12 @@ func (rc *ResourceCommand) Delete(ctx context.Context, client *authclient.Client
 			return trace.Wrap(err)
 		}
 		fmt.Printf("Integration %q removed\n", rc.ref.Name)
+
+	case types.KindUserIntegrationTask:
+		if err := client.UserIntegrationTasksServiceClient().DeleteUserIntegrationTask(ctx, rc.ref.Name); err != nil {
+			return trace.Wrap(err)
+		}
+		fmt.Printf("user integration task %q has been deleted\n", rc.ref.Name)
 
 	case types.KindDiscoveryConfig:
 		remote := client.DiscoveryConfigClient()
@@ -2775,6 +2818,31 @@ func (rc *ResourceCommand) getCollection(ctx context.Context, client *authclient
 			}
 		}
 		return &integrationCollection{integrations: resources}, nil
+	case types.KindUserIntegrationTask:
+		userIntegrationTasksClient := client.UserIntegrationTasksClient()
+		if rc.ref.Name != "" {
+			uit, err := userIntegrationTasksClient.GetUserIntegrationTask(ctx, rc.ref.Name)
+			if err != nil {
+				return nil, trace.Wrap(err)
+			}
+			return &userIntegrationTaskCollection{items: []*userintegrationtasksv1.UserIntegrationTask{uit}}, nil
+		}
+
+		var tasks []*userintegrationtasksv1.UserIntegrationTask
+		nextToken := ""
+		for {
+			resp, token, err := userIntegrationTasksClient.ListUserIntegrationTasks(ctx, 0 /* default size */, nextToken)
+			if err != nil {
+				return nil, trace.Wrap(err)
+			}
+			tasks = append(tasks, resp...)
+
+			if token == "" {
+				break
+			}
+			nextToken = token
+		}
+		return &userIntegrationTaskCollection{items: tasks}, nil
 	case types.KindDiscoveryConfig:
 		remote := client.DiscoveryConfigClient()
 		if rc.ref.Name != "" {

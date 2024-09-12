@@ -73,6 +73,12 @@ type GithubConnector interface {
 	GetAPIEndpointURL() string
 	// GetClientRedirectSettings returns the client redirect settings.
 	GetClientRedirectSettings() *SSOClientRedirectSettings
+	// GetMFASettings returns the connector's MFA settings.
+	GetMFASettings() GithubConnectorMFASettings
+	// IsMFAEnabled returns whether the connector has MFA enabled.
+	IsMFAEnabled() bool
+	// WithMFASettings overwrites some connector settings from MFA settings.
+	WithMFASettings() error
 }
 
 // NewGithubConnector creates a new Github connector from name and spec
@@ -286,6 +292,32 @@ func (c *GithubConnectorV3) GetClientRedirectSettings() *SSOClientRedirectSettin
 		return nil
 	}
 	return c.Spec.ClientRedirectSettings
+}
+
+// GetMFASettings returns the connector's MFA settings.
+func (o *GithubConnectorV3) GetMFASettings() GithubConnectorMFASettings {
+	if o.Spec.MFASettings == nil {
+		return GithubConnectorMFASettings{
+			Enabled: false,
+		}
+	}
+	return *o.Spec.MFASettings
+}
+
+// IsMFAEnabled returns whether the connector has MFA enabled.
+func (o *GithubConnectorV3) IsMFAEnabled() bool {
+	return o.GetMFASettings().Enabled
+}
+
+// WithMFASettings returns the connector will some settings overwritten set from MFA settings.
+func (o *GithubConnectorV3) WithMFASettings() error {
+	if !o.IsMFAEnabled() {
+		return trace.BadParameter("this connector does not have MFA enabled")
+	}
+
+	o.Spec.ClientID = o.Spec.MFASettings.ClientId
+	o.Spec.ClientSecret = o.Spec.MFASettings.ClientSecret
+	return nil
 }
 
 // MapClaims returns a list of logins based on the provided claims,

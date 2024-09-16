@@ -48,9 +48,9 @@ func TestMarshalUserIntegrationTaskRoundTrip(t *testing.T) {
 			Integration: "my-integration",
 			TaskType:    "discover-ec2",
 			IssueType:   "SSM_AGENT_MISSING",
+			State:       "OPEN",
 			DiscoverEc2: &userintegrationtasksv1.DiscoverEC2{Instances: map[string]*userintegrationtasksv1.DiscoverEC2Instance{
 				"i-1234567890": {
-					State:           "OPEN",
 					Name:            "instance-name",
 					Region:          "us-east-1",
 					InvocationUrl:   "https://example.com/",
@@ -86,10 +86,10 @@ spec:
   integration: my-integration
   task_type: discover-ec2
   issue_type: SSM_AGENT_MISSING
+  state: OPEN
   discover_ec2:
     instances:
       i-1234567890:
-        state: OPEN
         name: instance-name
         region: us-east-1
         invocation_url: https://example.com/
@@ -114,9 +114,9 @@ spec:
 			Integration: "my-integration",
 			TaskType:    "discover-ec2",
 			IssueType:   "SSM_AGENT_MISSING",
+			State:       "OPEN",
 			DiscoverEc2: &userintegrationtasksv1.DiscoverEC2{Instances: map[string]*userintegrationtasksv1.DiscoverEC2Instance{
 				"i-1234567890": {
-					State:           "OPEN",
 					Name:            "instance-name",
 					Region:          "us-east-1",
 					InvocationUrl:   "https://example.com/",

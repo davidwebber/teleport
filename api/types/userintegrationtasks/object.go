@@ -55,21 +55,19 @@ const (
 // ValidateUserIntegrationTask validates the UserIntegrationTask object without modifying it.
 func ValidateUserIntegrationTask(uit *userintegrationtasksv1.UserIntegrationTask) error {
 	switch {
-	case uit == nil:
-		return trace.BadParameter("user integration task is nil")
-	case uit.Kind != types.KindUserIntegrationTask:
+	case uit.GetKind() != types.KindUserIntegrationTask:
 		return trace.BadParameter("invalid kind")
-	case uit.Version != types.V1:
+	case uit.GetVersion() != types.V1:
 		return trace.BadParameter("invalid version")
-	case uit.SubKind != "":
+	case uit.GetSubKind() != "":
 		return trace.BadParameter("invalid sub kind, must be empty")
-	case uit.Metadata == nil:
+	case uit.GetMetadata() == nil:
 		return trace.BadParameter("user integration task metadata is nil")
-	case uit.Metadata.Name == "":
+	case uit.Metadata.GetName() == "":
 		return trace.BadParameter("user integration task name is empty")
-	case uit.Spec == nil:
+	case uit.GetSpec() == nil:
 		return trace.BadParameter("user integration task spec is nil")
-	case uit.Spec.Integration == "":
+	case uit.GetSpec().Integration == "":
 		return trace.BadParameter("integration is required")
 	}
 

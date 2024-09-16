@@ -26,15 +26,11 @@ import (
 
 func TestKey(t *testing.T) {
 
-	k1 := backend.Key("test")
 	k2 := backend.NewKey("test")
 	k3 := backend.ExactKey("test")
 
-	assert.NotEqual(t, k1, k2)
 	assert.NotEqual(t, k2, k3)
-	assert.NotEqual(t, k1, k3)
 
-	assert.Equal(t, "test", k1.String())
 	assert.Equal(t, "/test", k2.String())
 	assert.Equal(t, "/test/", k3.String())
 }
@@ -80,8 +76,8 @@ func TestKeyString(t *testing.T) {
 		},
 		{
 			name:     "noend key",
-			key:      backend.Key{0},
-			expected: "\x00",
+			key:      backend.RangeEnd(backend.NewKey("\xFF")),
+			expected: "/0",
 		},
 	}
 
@@ -97,7 +93,7 @@ func TestKeyComponents(t *testing.T) {
 	tests := []struct {
 		name     string
 		key      backend.Key
-		expected [][]byte
+		expected []string
 	}{
 		{
 			name: "default value has zero components",
@@ -109,22 +105,22 @@ func TestKeyComponents(t *testing.T) {
 		{
 			name:     "empty exact key has empty component",
 			key:      backend.ExactKey(),
-			expected: [][]byte{{}},
+			expected: []string{""},
 		},
 		{
 			name:     "single value key has a component",
 			key:      backend.NewKey("alpha"),
-			expected: [][]byte{[]byte("alpha")},
+			expected: []string{"alpha"},
 		},
 		{
 			name:     "multiple components",
 			key:      backend.NewKey("foo", "bar", "baz"),
-			expected: [][]byte{[]byte("foo"), []byte("bar"), []byte("baz")},
+			expected: []string{"foo", "bar", "baz"},
 		},
 		{
 			name:     "key without separator",
-			key:      backend.Key("testing"),
-			expected: [][]byte{[]byte("testing")},
+			key:      backend.ExactKey("foo", "bar", "baz"),
+			expected: []string{"foo", "bar", "baz", ""},
 		},
 	}
 

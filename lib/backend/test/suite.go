@@ -517,7 +517,7 @@ func testKeepAlive(t *testing.T, newBackend Constructor) {
 
 	// ...expect that the event channel contains the original `init` message
 	// sent when the Firestore client was set up.
-	requireEvent(t, watcher, types.OpInit, nil, eventTimeout)
+	requireEvent(t, watcher, types.OpInit, backend.Key{}, eventTimeout)
 
 	// Make sure that nothing breaks even if the value we are KeepAlive-ing is
 	// somewhat big; PostgreSQL starts optimizing values if their compressed
@@ -586,7 +586,7 @@ func testEvents(t *testing.T, newBackend Constructor) {
 	defer func() { require.NoError(t, watcher.Close()) }()
 
 	// Make sure INIT event is emitted.
-	requireEvent(t, watcher, types.OpInit, nil, eventTimeout)
+	requireEvent(t, watcher, types.OpInit, backend.Key{}, eventTimeout)
 
 	// Add item to backend.
 	item := &backend.Item{Key: prefix("b"), Value: []byte("val"), Expires: clock.Now().UTC().Add(time.Hour)}
@@ -1036,7 +1036,7 @@ func testMirror(t *testing.T, newBackend Constructor) {
 	defer func() { require.NoError(t, watcher.Close()) }()
 
 	// Make sure INIT event is emitted.
-	requireEvent(t, watcher, types.OpInit, nil, eventTimeout)
+	requireEvent(t, watcher, types.OpInit, backend.Key{}, eventTimeout)
 
 	// Add item to backend with a 1 second TTL.
 	item := &backend.Item{
@@ -1220,8 +1220,8 @@ func requireWaitGroupToFinish(ctx context.Context, t *testing.T, waitGroup *sync
 // MakePrefix returns function that appends unique prefix
 // to any key, used to make test suite concurrent-run proof
 func MakePrefix() func(k string) backend.Key {
-	id := "/" + uuid.New().String()
+	id := uuid.New().String()
 	return func(k string) backend.Key {
-		return backend.Key(id + k)
+		return backend.NewKey(id + k)
 	}
 }

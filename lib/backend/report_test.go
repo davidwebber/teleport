@@ -60,7 +60,7 @@ func TestReporterTopRequestsLimit(t *testing.T) {
 
 	// Run through 1000 unique keys.
 	for i := 0; i < 1000; i++ {
-		r.trackRequest(types.OpGet, []byte(strconv.Itoa(i)), nil)
+		r.trackRequest(types.OpGet, NewKey(strconv.Itoa(i)), Key{})
 	}
 
 	// Now the metric should have only 10 of the keys above.

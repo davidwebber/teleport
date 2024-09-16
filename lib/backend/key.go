@@ -19,37 +19,63 @@ package backend
 import (
 	"bytes"
 	"fmt"
+	"slices"
 	"strings"
 )
 
 // Key is the unique identifier for an [Item].
-type Key []byte
+type Key struct {
+	components []string
+	s          string
+	exactKey   bool
+	noEnd      bool
+}
 
 // Separator is used as a separator between key parts
 const Separator = '/'
 
 // NewKey joins parts into path separated by Separator,
 // makes sure path always starts with Separator ("/")
-func NewKey(parts ...string) Key {
-	return internalKey("", parts...)
+func NewKey(components ...string) Key {
+	k := internalKey("", components...)
+	k.exactKey = k.s == string(Separator) || (len(k.s) > 0 && k.s[len(k.s)-1] == Separator)
+	return k
 }
 
 // ExactKey is like Key, except a Separator is appended to the result
 // path of Key. This is to ensure range matching of a path will only
 // math child paths and not other paths that have the resulting path
 // as a prefix.
-func ExactKey(parts ...string) Key {
-	return append(NewKey(parts...), Separator)
+func ExactKey(components ...string) Key {
+	k := NewKey(append(components, "")...)
+	k.exactKey = true
+	return k
 }
 
-func internalKey(internalPrefix string, parts ...string) Key {
-	return Key(strings.Join(append([]string{internalPrefix}, parts...), string(Separator)))
+func KeyFromString(s string) Key {
+	components := strings.Split(s, string(Separator))
+	if components[0] == "" && len(components) > 1 {
+		components = components[1:]
+	}
+	return NewKey(components...)
+}
+
+func (k Key) IsZero() bool {
+	return len(k.components) == 0 && k.s == ""
+}
+
+func internalKey(internalPrefix string, components ...string) Key {
+	return Key{components: components, s: strings.Join(append([]string{internalPrefix}, components...), string(Separator))}
 }
 
 // String returns the textual representation of the key with
 // each component concatenated together via the [Separator].
 func (k Key) String() string {
-	return string(k)
+	if k.noEnd {
+		return string(noEnd)
+	}
+
+	return k.s
 }
 
 // IsZero reports whether k represents the zero key.
@@ -59,41 +85,46 @@ func (k Key) IsZero() bool {
 
 // HasPrefix reports whether the key begins with prefix.
 func (k Key) HasPrefix(prefix Key) bool {
-	return bytes.HasPrefix(k, prefix)
+	return strings.HasPrefix(k.s, prefix.s)
 }
 
 // TrimPrefix returns the key without the provided leading prefix string.
 // If the key doesn't start with prefix, it is returned unchanged.
 func (k Key) TrimPrefix(prefix Key) Key {
-	return bytes.TrimPrefix(k, prefix)
+	key := strings.TrimPrefix(k.s, prefix.s)
+	if key == "" {
+		return Key{}
+	}
+
+	return KeyFromString(key)
 }
 
 func (k Key) PrependPrefix(p Key) Key {
-	return append(p, k...)
+	return NewKey(append(slices.Clone(p.components), slices.Clone(k.components)...)...)
 }
 
 // HasSuffix reports whether the key ends with suffix.
 func (k Key) HasSuffix(suffix Key) bool {
-	return bytes.HasSuffix(k, suffix)
+	return strings.HasSuffix(k.s, suffix.s)
 }
 
 // TrimSuffix returns the key without the provided trailing suffix string.
 // If the key doesn't end with suffix, it is returned unchanged.
 func (k Key) TrimSuffix(suffix Key) Key {
-	return bytes.TrimSuffix(k, suffix)
-}
-
-func (k Key) Components() [][]byte {
-	if len(k) == 0 {
-		return nil
+	key := strings.TrimSuffix(k.s, suffix.s)
+	if key == "" {
+		return Key{}
 	}
 
-	sep := []byte{Separator}
-	return bytes.Split(bytes.TrimPrefix(k, sep), sep)
+	return KeyFromString(key)
+}
+
+func (k Key) Components() []string {
+	return slices.Clone(k.components)
 }
 
 func (k Key) Compare(o Key) int {
-	return bytes.Compare(k, o)
+	return strings.Compare(k.s, o.s)
 }
 
 // Scan implement sql.Scanner, allowing a [Key] to
@@ -102,9 +133,16 @@ func (k Key) Compare(o Key) int {
 func (k *Key) Scan(scan any) error {
 	switch key := scan.(type) {
 	case []byte:
-		*k = bytes.Clone(key)
+		if len(key) == 0 {
+			return nil
+		}
+		*k = KeyFromString(string(bytes.Clone(key)))
 	case string:
-		*k = []byte(strings.Clone(key))
+		if len(key) == 0 {
+			return nil
+		}
+
+		*k = KeyFromString(strings.Clone(key))
 	default:
 		return fmt.Errorf("invalid Key type %T", scan)
 	}

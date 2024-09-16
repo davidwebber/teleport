@@ -21,8 +21,8 @@ package backend
 import (
 	"context"
 	"regexp"
+	"strings"
 	"time"
-	"unicode/utf8"
 
 	"github.com/gravitational/trace"
 	"github.com/jonboulle/clockwork"
@@ -42,25 +42,30 @@ var denyPatterns = []*regexp.Regexp{
 }
 
 // isKeySafe checks if the passed in key conforms to whitelist
-func isKeySafe(s Key) bool {
-	return allowPattern.Match(s) && !denyPatternsMatch(s) && utf8.Valid(s)
-}
+func isKeySafe(key Key) bool {
+	for _, k := range key.Components() {
+		switch k {
+		case string(noEnd):
+			continue
+		case ".", "..", "":
+			return false
+		}
 
-// denyPatternsMatch checks if the passed in key conforms to the deny patterns.
-func denyPatternsMatch(s Key) bool {
-	for _, pattern := range denyPatterns {
-		if pattern.Match(s) {
-			return true
+		if strings.Contains(k, string(Separator)) {
+			return false
+		}
+
+		if !allowPattern.MatchString(k) {
+			return false
 		}
 	}
-
-	return false
+	return true
 }
 
 var _ Backend = (*Sanitizer)(nil)
 
-// Sanitizer wraps a Backend implementation to make sure all values requested
-// of the backend are whitelisted.
+// Sanitizer wraps a Backend implementation to make sure all
+// [Key]s requested of the backend are allowed.
 type Sanitizer struct {
 	backend Backend
 }

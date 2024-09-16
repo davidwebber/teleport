@@ -530,7 +530,7 @@ func testAtomicWriteOther(t *testing.T, newBackend Constructor) {
 
 	prefix := MakePrefix()
 
-	fooKey, barKey, badKey := prefix("/foo"), prefix("/bar"), prefix("/bad")
+	fooKey, barKey, badKey := prefix("foo"), prefix("bar"), prefix("bad")
 
 	fooVal, barVal := []byte("foo"), []byte("bar")
 

@@ -43,14 +43,15 @@ var denyPatterns = []*regexp.Regexp{
 
 // isKeySafe checks if the passed in key conforms to whitelist
 func isKeySafe(key Key) bool {
-	for i, k := range key.Components() {
+	components := key.Components()
+	for i, k := range components {
 		switch k {
 		case string(noEnd):
 			continue
 		case ".", "..":
 			return false
 		case "":
-			return i != len(key.Components())
+			return key.exactKey && i == len(components)-1
 		}
 
 		if strings.Contains(k, string(Separator)) {

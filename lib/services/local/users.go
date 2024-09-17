@@ -586,7 +586,7 @@ func (s *IdentityService) getUserWithSecrets(ctx context.Context, user string) (
 	var items userItems
 	for _, item := range result.Items {
 		suffix := item.Key.TrimPrefix(startKey)
-		items.Set(suffix, item) // Result of Set i
+		items.Set(suffix.Components(), item) // Result of Set i
 	}
 
 	u, err := userFromUserItems(user, items)

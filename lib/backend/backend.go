@@ -301,10 +301,6 @@ const NoLimit = 0
 // If used with a key prefix, this will return
 // the end of the range for that key prefix.
 func nextKey(key Key) Key {
-	if key.s == string(Separator) {
-		return Key{s: "0", components: []string{"0"}}
-	}
-
 	end := make([]byte, len(key.s))
 	copy(end, key.s)
 	for i := len(end) - 1; i >= 0; i-- {

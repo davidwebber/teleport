@@ -431,17 +431,17 @@ var fullUsersPrefix = backend.ExactKey(webPrefix, usersPrefix)
 
 // splitUsernameAndSuffix is a helper for extracting usernames and suffixes from
 // backend key values.
-func splitUsernameAndSuffix(key backend.Key) (name string, suffix backend.Key, err error) {
+func splitUsernameAndSuffix(key backend.Key) (name string, suffix []string, err error) {
 	if !key.HasPrefix(fullUsersPrefix) {
-		return "", backend.Key{}, trace.BadParameter("expected format '%s/<name>/<suffix>', got '%s'", fullUsersPrefix, key)
+		return "", nil, trace.BadParameter("expected format '%s/<name>/<suffix>', got '%s'", fullUsersPrefix, key)
 	}
 	k := key.TrimPrefix(fullUsersPrefix)
 
 	components := k.Components()
 	if len(components) < 2 {
-		return "", backend.Key{}, trace.BadParameter("expected format <name>/<suffix>, got %q", key)
+		return "", nil, trace.BadParameter("expected format <name>/<suffix>, got %q", key)
 	}
-	return components[0], backend.NewKey(k.Components()[1:]...), nil
+	return components[0], k.Components()[1:], nil
 }
 
 // collectUserItems handles the case where multiple items pertain to the same user resource.
@@ -488,20 +488,20 @@ type userItems struct {
 }
 
 // Set attempts to set a field by suffix.
-func (u *userItems) Set(suffix backend.Key, item backend.Item) (ok bool) {
+func (u *userItems) Set(suffix []string, item backend.Item) (ok bool) {
 	switch {
-	case suffix.Compare(backend.NewKey(paramsPrefix)) == 0:
+	case len(suffix) == 0:
+		return false
+	case suffix[0] == paramsPrefix:
 		u.params = &item
-	case suffix.Compare(backend.NewKey(pwdPrefix)) == 0:
+	case suffix[0] == pwdPrefix:
 		u.pwd = &item
-	case suffix.Compare(backend.NewKey(webauthnLocalAuthPrefix)) == 0:
+	case suffix[0] == webauthnLocalAuthPrefix:
 		u.webauthnLocalAuth = &item
+	case suffix[0] == mfaDevicePrefix:
+		u.mfa = append(u.mfa, &item)
 	default:
-		if suffix.HasPrefix(backend.NewKey(mfaDevicePrefix)) {
-			u.mfa = append(u.mfa, &item)
-		} else {
-			return false
-		}
+		return false
 	}
 	return true
 }

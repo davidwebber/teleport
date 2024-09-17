@@ -59,11 +59,11 @@ func TestRangeEnd(t *testing.T) {
 		},
 		{
 			key:      NewKey("\xFF"),
-			expected: NewKey("0"),
+			expected: Key{s: "0", components: []string{"0"}},
 		},
 		{
 			key:      NewKey("\xFF\xFF\xFF"),
-			expected: NewKey("0"),
+			expected: Key{s: "0", components: []string{"0"}},
 		},
 	} {
 		t.Run(test.key.String(), func(t *testing.T) {

@@ -145,7 +145,7 @@ func (s *StatusService) UpsertClusterAlert(ctx context.Context, alert types.Clus
 }
 
 func (s *StatusService) DeleteClusterAlert(ctx context.Context, alertID string) error {
-	err := s.Backend.Delete(ctx, backend.NewKey(clusterAlertPrefix, alertID))
+	err := s.Backend.Delete(ctx, backend.NewKey(clusterAlertPrefix).AppendKey(backend.KeyFromString(alertID)))
 	if trace.IsNotFound(err) {
 		return trace.NotFound("cluster alert %q not found", alertID)
 	}

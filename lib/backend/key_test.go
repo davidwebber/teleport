@@ -77,7 +77,7 @@ func TestKeyString(t *testing.T) {
 		{
 			name:     "noend key",
 			key:      backend.RangeEnd(backend.NewKey("\xFF")),
-			expected: "/0",
+			expected: "0",
 		},
 	}
 
@@ -417,7 +417,7 @@ func TestKeyPrependPrefix(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			prefixed := test.key.PrependPrefix(test.prefix)
+			prefixed := test.key.PrependKey(test.prefix)
 			assert.Equal(t, test.expected, prefixed)
 		})
 	}

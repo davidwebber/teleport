@@ -57,7 +57,13 @@ func KeyFromString(s string) Key {
 	if components[0] == "" && len(components) > 1 {
 		components = components[1:]
 	}
-	return NewKey(components...)
+
+	return Key{
+		components: components,
+		s:          s,
+		exactKey:   s == string(Separator) || (len(s) > 0 && s[len(s)-1] == Separator),
+		noEnd:      s == string(noEnd),
+	}
 }
 
 func (k Key) IsZero() bool {

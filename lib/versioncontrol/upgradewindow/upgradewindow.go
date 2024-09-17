@@ -367,7 +367,7 @@ func (e *kubeDriver) Sync(ctx context.Context, rsp proto.ExportUpgradeWindowsRes
 	}
 
 	_, err := e.cfg.Backend.Put(ctx, backend.Item{
-		Key:   []byte(kubeSchedKey),
+		Key:   backend.NewKey(kubeSchedKey),
 		Value: []byte(rsp.KubeControllerSchedule),
 	})
 
@@ -378,7 +378,7 @@ func (e *kubeDriver) Reset(ctx context.Context) error {
 	// kube backend doesn't support deletes right now, so just set
 	// the key to empty.
 	_, err := e.cfg.Backend.Put(ctx, backend.Item{
-		Key:   []byte(kubeSchedKey),
+		Key:   backend.NewKey(kubeSchedKey),
 		Value: []byte{},
 	})
 

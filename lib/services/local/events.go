@@ -719,7 +719,7 @@ func (p *namespaceParser) match(key backend.Key) bool {
 	// namespaces are stored under key '/namespaces/<namespace-name>/params'
 	// and this code matches similar pattern
 	return p.baseParser.match(key) &&
-		key.HasSuffix(backend.Key(paramsPrefix)) &&
+		key.HasSuffix(backend.NewKey(paramsPrefix)) &&
 		len(key.Components()) == 3
 }
 
@@ -833,7 +833,7 @@ func (p *userParser) match(key backend.Key) bool {
 	// users are stored under key '/web/users/<username>/params'
 	// and this code matches similar pattern
 	return p.baseParser.match(key) &&
-		key.HasSuffix(backend.Key(paramsPrefix)) &&
+		key.HasSuffix(backend.NewKey(paramsPrefix)) &&
 		len(key.Components()) == 4
 }
 
@@ -1781,7 +1781,7 @@ func (p *accessListParser) parse(event backend.Event) (types.Resource, error) {
 
 func newAuditQueryParser() *auditQueryParser {
 	return &auditQueryParser{
-		baseParser: newBaseParser(backend.NewKey(AuditQueryPrefix)),
+		baseParser: newBaseParser(AuditQueryPrefix),
 	}
 }
 
@@ -1804,7 +1804,7 @@ func (p *auditQueryParser) parse(event backend.Event) (types.Resource, error) {
 
 func newSecurityReportParser() *securityReportParser {
 	return &securityReportParser{
-		baseParser: newBaseParser(backend.NewKey(SecurityReportPrefix)),
+		baseParser: newBaseParser(SecurityReportPrefix),
 	}
 }
 
@@ -1827,7 +1827,7 @@ func (p *securityReportParser) parse(event backend.Event) (types.Resource, error
 
 func newSecurityReportStateParser() *securityReportStateParser {
 	return &securityReportStateParser{
-		baseParser: newBaseParser(backend.NewKey(SecurityReportStatePrefix)),
+		baseParser: newBaseParser(SecurityReportStatePrefix),
 	}
 }
 
@@ -2023,7 +2023,7 @@ func (p *AccessMonitoringRuleParser) parse(event backend.Event) (types.Resource,
 
 func newUserNotificationParser() *userNotificationParser {
 	return &userNotificationParser{
-		baseParser: newBaseParser(backend.NewKey(notificationsUserSpecificPrefix)),
+		baseParser: newBaseParser(notificationsUserSpecificPrefix),
 	}
 }
 
@@ -2067,7 +2067,7 @@ func (p *userNotificationParser) parse(event backend.Event) (types.Resource, err
 
 func newGlobalNotificationParser() *globalNotificationParser {
 	return &globalNotificationParser{
-		baseParser: newBaseParser(backend.NewKey(notificationsGlobalPrefix)),
+		baseParser: newBaseParser(notificationsGlobalPrefix),
 	}
 }
 
@@ -2431,18 +2431,18 @@ type EventMatcher interface {
 func base(key backend.Key, offset int) (string, error) {
 	parts := key.Components()
 	if len(parts) < offset+1 {
-		return "", trace.NotFound("failed parsing %v", string(key))
+		return "", trace.NotFound("failed parsing %v", key.String())
 	}
-	return string(parts[len(parts)-offset-1]), nil
+	return parts[len(parts)-offset-1], nil
 }
 
 // baseTwoKeys returns two last keys
 func baseTwoKeys(key backend.Key) (string, string, error) {
 	parts := key.Components()
 	if len(parts) < 2 {
-		return "", "", trace.NotFound("failed parsing %v", string(key))
+		return "", "", trace.NotFound("failed parsing %v", key.String())
 	}
-	return string(parts[len(parts)-2]), string(parts[len(parts)-1]), nil
+	return parts[len(parts)-2], parts[len(parts)-1], nil
 }
 
 func newAccessGraphSettingsParser() *accessGraphSettingsParser {

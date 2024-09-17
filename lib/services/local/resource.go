@@ -21,8 +21,6 @@ package local
 import (
 	"context"
 	"encoding/json"
-	"strings"
-	"unicode/utf8"
 
 	"github.com/gravitational/trace"
 
@@ -50,7 +48,7 @@ func CreateResources(ctx context.Context, b backend.Backend, resources ...types.
 			if err != nil {
 				return trace.Wrap(err)
 			}
-			return trace.AlreadyExists("resource %q already exists", string(item.Key))
+			return trace.AlreadyExists("resource %q already exists", item.Key.String())
 		}
 	}
 	// create all items.
@@ -433,17 +431,17 @@ var fullUsersPrefix = backend.ExactKey(webPrefix, usersPrefix)
 
 // splitUsernameAndSuffix is a helper for extracting usernames and suffixes from
 // backend key values.
-func splitUsernameAndSuffix(key backend.Key) (name string, suffix string, err error) {
+func splitUsernameAndSuffix(key backend.Key) (name string, suffix backend.Key, err error) {
 	if !key.HasPrefix(fullUsersPrefix) {
-		return "", "", trace.BadParameter("expected format '%s/<name>/<suffix>', got '%s'", fullUsersPrefix, key)
+		return "", backend.Key{}, trace.BadParameter("expected format '%s/<name>/<suffix>', got '%s'", fullUsersPrefix, key)
 	}
 	k := key.TrimPrefix(fullUsersPrefix)
 
 	components := k.Components()
 	if len(components) < 2 {
-		return "", "", trace.BadParameter("expected format <name>/<suffix>, got %q", key)
+		return "", backend.Key{}, trace.BadParameter("expected format <name>/<suffix>, got %q", key)
 	}
-	return string(components[0]), k.String()[len(components[0])+utf8.RuneLen(backend.Separator):], nil
+	return components[0], backend.NewKey(k.Components()[1:]...), nil
 }
 
 // collectUserItems handles the case where multiple items pertain to the same user resource.
@@ -490,16 +488,16 @@ type userItems struct {
 }
 
 // Set attempts to set a field by suffix.
-func (u *userItems) Set(suffix string, item backend.Item) (ok bool) {
-	switch suffix {
-	case paramsPrefix:
+func (u *userItems) Set(suffix backend.Key, item backend.Item) (ok bool) {
+	switch {
+	case suffix.Compare(backend.NewKey(paramsPrefix)) == 0:
 		u.params = &item
-	case pwdPrefix:
+	case suffix.Compare(backend.NewKey(pwdPrefix)) == 0:
 		u.pwd = &item
-	case webauthnLocalAuthPrefix:
+	case suffix.Compare(backend.NewKey(webauthnLocalAuthPrefix)) == 0:
 		u.webauthnLocalAuth = &item
 	default:
-		if strings.HasPrefix(suffix, mfaDevicePrefix) {
+		if suffix.HasPrefix(backend.NewKey(mfaDevicePrefix)) {
 			u.mfa = append(u.mfa, &item)
 		} else {
 			return false

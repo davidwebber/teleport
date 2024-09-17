@@ -68,6 +68,14 @@ func internalKey(internalPrefix string, components ...string) Key {
 	return Key{components: components, s: strings.Join(append([]string{internalPrefix}, components...), string(Separator))}
 }
 
+func (k Key) ExactKey() Key {
+	if k.exactKey {
+		return k
+	}
+
+	return ExactKey(k.components...)
+}
+
 // String returns the textual representation of the key with
 // each component concatenated together via the [Separator].
 func (k Key) String() string {
@@ -76,11 +84,6 @@ func (k Key) String() string {
 	}
 
 	return k.s
-}
-
-// IsZero reports whether k represents the zero key.
-func (k Key) IsZero() bool {
-	return len(k) == 0
 }
 
 // HasPrefix reports whether the key begins with prefix.
@@ -99,8 +102,12 @@ func (k Key) TrimPrefix(prefix Key) Key {
 	return KeyFromString(key)
 }
 
-func (k Key) PrependPrefix(p Key) Key {
+func (k Key) PrependKey(p Key) Key {
 	return NewKey(append(slices.Clone(p.components), slices.Clone(k.components)...)...)
+}
+
+func (k Key) AppendKey(p Key) Key {
+	return p.PrependKey(k)
 }
 
 // HasSuffix reports whether the key ends with suffix.

@@ -129,3 +129,5 @@ If `ssh` works, try running the playbook with verbose mode on:
 ```code
 $ ansible-playbook -vvvv playbook.yaml
 ```
+
+If you have uppercase hostnames you may need to set `case_insensitive_routing: true` in the `auth_service` section of your `/etc/teleport.yaml` config file and restart.  (Teleport Cloud users can `tsh login` to their cluster as a user with `editor` privileges, run `tctl get cluster_networking_config > cnc.yaml`, and add the same `case_insensitive_routing: true` under `spec:` and then `tctl create -f cnc.yaml`)

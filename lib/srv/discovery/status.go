@@ -25,9 +25,12 @@ import (
 	"time"
 
 	"github.com/gravitational/trace"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	discoveryconfigv1 "github.com/gravitational/teleport/api/gen/proto/go/teleport/discoveryconfig/v1"
+	userintegrationtasksv1 "github.com/gravitational/teleport/api/gen/proto/go/teleport/userintegrationtasks/v1"
 	"github.com/gravitational/teleport/api/types/discoveryconfig"
+	"github.com/gravitational/teleport/api/types/userintegrationtasks"
 	libevents "github.com/gravitational/teleport/lib/events"
 	aws_sync "github.com/gravitational/teleport/lib/srv/discovery/fetchers/aws-sync"
 	"github.com/gravitational/teleport/lib/srv/server"
@@ -293,5 +296,94 @@ func (s *Server) ReportEC2SSMInstallationResult(ctx context.Context, result *ser
 
 	s.updateDiscoveryConfigStatus(result.DiscoveryConfig)
 
+	s.awsEC2Tasks.addFailedEnrollment(
+		awsEC2FailedEnrollmentGroup{
+			integration: result.IntegrationName,
+			// TODO(marco): create and use more consts like
+			// AutoDiscoverEC2IssueScriptSSMAgentNotRunning
+			issueType: result.SSMRunEvent.Code,
+		},
+		result.SSMRunEvent.InstanceID,
+		&userintegrationtasksv1.DiscoverEC2Instance{
+			// TODO(marco): add instance name
+			Region:          result.SSMRunEvent.Region,
+			InvocationUrl:   result.SSMRunEvent.InvocationURL,
+			DiscoveryConfig: result.DiscoveryConfig,
+			DiscoveryGroup:  s.DiscoveryGroup,
+			SyncTime:        timestamppb.New(result.SSMRunEvent.Time),
+		},
+	)
+
 	return nil
+}
+
+// awsEC2FailedEnrollments ...
+type awsEC2Tasks struct {
+	mu sync.RWMutex
+	// instancesIssue maps the DiscoveryConfig name and integration to a summary of discovered/enrolled resources.
+	instancesIssue map[awsEC2FailedEnrollmentGroup]map[string]*userintegrationtasksv1.DiscoverEC2Instance
+	groupPending   map[awsEC2FailedEnrollmentGroup]struct{}
+}
+
+// awsEC2FailedEnrollmentGroup ...
+type awsEC2FailedEnrollmentGroup struct {
+	integration string
+	issueType   string
+}
+
+func (d *awsEC2Tasks) iterationStarted() {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	d.instancesIssue = make(map[awsEC2FailedEnrollmentGroup]map[string]*userintegrationtasksv1.DiscoverEC2Instance)
+	d.groupPending = make(map[awsEC2FailedEnrollmentGroup]struct{})
+}
+
+func (d *awsEC2Tasks) addFailedEnrollment(g awsEC2FailedEnrollmentGroup, instanceID string, instance *userintegrationtasksv1.DiscoverEC2Instance) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	if d.instancesIssue == nil {
+		d.instancesIssue = make(map[awsEC2FailedEnrollmentGroup]map[string]*userintegrationtasksv1.DiscoverEC2Instance)
+	}
+	if _, ok := d.instancesIssue[g]; !ok {
+		d.instancesIssue[g] = make(map[string]*userintegrationtasksv1.DiscoverEC2Instance)
+	}
+	d.instancesIssue[g][instanceID] = instance
+
+	if d.groupPending == nil {
+		d.groupPending = make(map[awsEC2FailedEnrollmentGroup]struct{})
+	}
+	d.groupPending[g] = struct{}{}
+}
+
+func (s *Server) upsertTasksForAWSEC2FailedEnrollments() {
+	s.awsEC2Tasks.mu.Lock()
+	defer s.awsEC2Tasks.mu.Unlock()
+	for g, instances := range s.awsEC2Tasks.instancesIssue {
+		if _, pending := s.awsEC2Tasks.groupPending[g]; !pending {
+			continue
+		}
+
+		task, err := userintegrationtasks.NewUserIntegrationTask(
+			"name",
+			&userintegrationtasksv1.UserIntegrationTaskSpec{
+				Integration: g.integration,
+				TaskType:    userintegrationtasks.TaskTypeDiscoverEC2,
+				IssueType:   g.issueType,
+				State:       userintegrationtasks.TaskStateOpen,
+				DiscoverEc2: &userintegrationtasksv1.DiscoverEC2{
+					Instances: instances,
+				},
+			},
+		)
+		if err != nil {
+			s.Log.WithError(err).Warn("failed to create user integration task for failed to enroll instance")
+			continue
+		}
+		if _, err := s.AccessPoint.UpsertUserIntegrationTask(s.ctx, task); err != nil {
+			s.Log.WithError(err).Warn("failed to create user integration task for failed to enroll instances")
+			continue
+		}
+		delete(s.awsEC2Tasks.groupPending, g)
+	}
 }

@@ -19,6 +19,8 @@
 package userintegrationtasks
 
 import (
+	"slices"
+
 	"github.com/gravitational/trace"
 
 	headerv1 "github.com/gravitational/teleport/api/gen/proto/go/teleport/header/v1"
@@ -44,6 +46,15 @@ func NewUserIntegrationTask(name string, spec *userintegrationtasksv1.UserIntegr
 
 	return cj, nil
 }
+
+const (
+	// TaskStateOpen identifies an issue with an instance that is not yet resolved.
+	TaskStateOpen = "OPEN"
+	// TaskStateResolved identifies an issue with an instance that is resolved.
+	TaskStateResolved = "RESOLVED"
+)
+
+var validTaskStates = []string{TaskStateOpen, TaskStateResolved}
 
 const (
 	// TaskTypeDiscoverEC2 identifies a User Integration Tasks that is created
@@ -84,11 +95,31 @@ func ValidateUserIntegrationTask(uit *userintegrationtasksv1.UserIntegrationTask
 }
 
 func validateDiscoverEC2TaskType(uit *userintegrationtasksv1.UserIntegrationTask) error {
-	if uit.Spec.DiscoverEc2 == nil {
+	if uit.GetSpec().DiscoverEc2 == nil {
 		return trace.BadParameter("%s requires the discover_ec2 field", TaskTypeDiscoverEC2)
 	}
-	if uit.Spec.IssueType == "" {
+	if uit.GetSpec().IssueType == "" {
 		return trace.BadParameter("issue type is required")
+	}
+	if !slices.Contains(validTaskStates, uit.GetSpec().State) {
+		return trace.BadParameter("invalid task state, allowed values: %v", validTaskStates)
+	}
+	for instanceName, instanceIssue := range uit.Spec.DiscoverEc2.Instances {
+		if instanceName == "" {
+			return trace.BadParameter("instance name in discover_ec2.instances field is required")
+		}
+		if instanceIssue.AccountId == "" {
+			return trace.BadParameter("account id in discover_ec2.instances field is required")
+		}
+		if instanceIssue.Region == "" {
+			return trace.BadParameter("region in discover_ec2.instances field is required")
+		}
+		if instanceIssue.DiscoveryConfig == "" {
+			return trace.BadParameter("discovery config in discover_ec2.instances field is required")
+		}
+		if instanceIssue.DiscoveryGroup == "" {
+			return trace.BadParameter("discovery group in discover_ec2.instances field is required")
+		}
 	}
 
 	return nil

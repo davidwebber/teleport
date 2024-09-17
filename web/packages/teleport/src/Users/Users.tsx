@@ -46,7 +46,7 @@ export function Users(props: State) {
     onStartDelete,
     onStartEdit,
     onStartReset,
-    showMAUInfo,
+    showMauInfo,
     onDismissUsersMAUNotice,
     onClose,
     onCreate,
@@ -100,7 +100,7 @@ export function Users(props: State) {
           <Indicator />
         </Box>
       )}
-      {showMAUInfo && (
+      {showMauInfo && (
         <Alert
           data-testid="users-not-mau-alert"
           dismissible
@@ -115,8 +115,8 @@ export function Users(props: State) {
           Note: The users displayed here are not an accurate reflection of
           Monthly Active Users (MAU). For example, users who log in through
           Single Sign-On (SSO) providers such as Okta will only appear here
-          temporarily and disappear once they terminate their active sessions.
-          For more information, read our documentation on{' '}
+          temporarily and disappear once their sessions expire. For more
+          information, read our documentation on{' '}
           <Link
             target="_blank"
             href="https://goteleport.com/docs/usage-billing/#monthly-active-users"

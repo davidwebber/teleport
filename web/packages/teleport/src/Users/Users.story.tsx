@@ -47,10 +47,10 @@ export const Loaded = () => {
   );
 };
 
-export const UsersNotEqualMAUNotice = () => {
+export const UsersNotEqualMauNotice = () => {
   return (
     <MemoryRouter>
-      <Users {...sample} showMAUInfo={true} />
+      <Users {...sample} showMauInfo={true} />
     </MemoryRouter>
   );
 };
@@ -147,6 +147,6 @@ const sample = {
   InviteCollaborators: null,
   onEmailPasswordResetClose: () => null,
   EmailPasswordReset: null,
-  showMAUInfo: false,
+  showMauInfo: false,
   onDismissUsersMAUNotice: () => null,
 };

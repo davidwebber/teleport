@@ -131,7 +131,7 @@ export default function useUsers({
 
   // if the cluster has billing enabled, and usageBasedBilling, and they haven't acknowledged
   // the info yet
-  const showMAUInfo =
+  const showMauInfo =
     ctx.getFeatureFlags().billing &&
     cfg.isUsageBasedBilling &&
     !storageService.getUsersMAUAcknowledged();
@@ -156,7 +156,7 @@ export default function useUsers({
     inviteCollaboratorsOpen,
     onEmailPasswordResetClose,
     EmailPasswordReset,
-    showMAUInfo,
+    showMauInfo,
     onDismissUsersMAUNotice,
   };
 }

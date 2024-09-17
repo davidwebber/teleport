@@ -57,7 +57,7 @@ describe('invite collaborators integration', () => {
       inviteCollaboratorsOpen: false,
       onEmailPasswordResetClose: () => undefined,
       EmailPasswordReset: null,
-      showMAUInfo: false,
+      showMauInfo: false,
       onDismissUsersMAUNotice: () => null,
     };
   });
@@ -137,7 +137,7 @@ describe('Users not equal to MAU Notice', () => {
       inviteCollaboratorsOpen: false,
       onEmailPasswordResetClose: () => undefined,
       EmailPasswordReset: null,
-      showMAUInfo: true,
+      showMauInfo: true,
       onDismissUsersMAUNotice: jest.fn(),
     };
   });
@@ -194,7 +194,7 @@ describe('email password reset integration', () => {
       inviteCollaboratorsOpen: false,
       onEmailPasswordResetClose: () => undefined,
       EmailPasswordReset: null,
-      showMAUInfo: false,
+      showMauInfo: false,
       onDismissUsersMAUNotice: () => null,
     };
   });

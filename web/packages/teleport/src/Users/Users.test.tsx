@@ -18,7 +18,7 @@
 
 import React from 'react';
 import { MemoryRouter } from 'react-router';
-import { render, screen } from 'design/utils/testing';
+import { render, screen, userEvent } from 'design/utils/testing';
 
 import { ContextProvider } from 'teleport';
 import { createTeleportContext } from 'teleport/mocks/contexts';
@@ -57,6 +57,8 @@ describe('invite collaborators integration', () => {
       inviteCollaboratorsOpen: false,
       onEmailPasswordResetClose: () => undefined,
       EmailPasswordReset: null,
+      showMAUInfo: false,
+      onDismissUsersMAUNotice: () => null,
     };
   });
 
@@ -105,6 +107,59 @@ describe('invite collaborators integration', () => {
   });
 });
 
+describe('Users not equal to MAU Notice', () => {
+  const ctx = createTeleportContext();
+  let props: State;
+
+  beforeEach(() => {
+    props = {
+      attempt: {
+        message: 'success',
+        isSuccess: true,
+        isProcessing: false,
+        isFailed: false,
+      },
+      users: [],
+      fetchRoles: async () => [],
+      operation: { type: 'invite-collaborators' },
+      onStartCreate: () => undefined,
+      onStartDelete: () => undefined,
+      onStartEdit: () => undefined,
+      onStartReset: () => undefined,
+      onStartInviteCollaborators: () => undefined,
+      onClose: () => undefined,
+      onDelete: () => undefined,
+      onCreate: () => undefined,
+      onUpdate: () => undefined,
+      onReset: () => undefined,
+      onInviteCollaboratorsClose: () => undefined,
+      InviteCollaborators: null,
+      inviteCollaboratorsOpen: false,
+      onEmailPasswordResetClose: () => undefined,
+      EmailPasswordReset: null,
+      showMAUInfo: true,
+      onDismissUsersMAUNotice: jest.fn(),
+    };
+  });
+
+  test('displayed Users Not Equal MAU Notice and dismissal', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter>
+        <ContextProvider ctx={ctx}>
+          <Users {...props} />
+        </ContextProvider>
+      </MemoryRouter>
+    );
+
+    expect(screen.getByTestId('users-not-mau-alert')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Dismiss' }));
+    expect(props.onDismissUsersMAUNotice).toHaveBeenCalled();
+    expect(screen.queryByTestId('users-not-mau-alert')).not.toBeInTheDocument();
+  });
+});
+
 describe('email password reset integration', () => {
   const ctx = createTeleportContext();
 
@@ -139,6 +194,8 @@ describe('email password reset integration', () => {
       inviteCollaboratorsOpen: false,
       onEmailPasswordResetClose: () => undefined,
       EmailPasswordReset: null,
+      showMAUInfo: false,
+      onDismissUsersMAUNotice: () => null,
     };
   });
 

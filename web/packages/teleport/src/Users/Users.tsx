@@ -17,7 +17,7 @@
  */
 
 import React from 'react';
-import { Indicator, Box, Alert, Button } from 'design';
+import { Indicator, Box, Alert, Button, Link } from 'design';
 
 import {
   FeatureBox,
@@ -46,6 +46,8 @@ export function Users(props: State) {
     onStartDelete,
     onStartEdit,
     onStartReset,
+    showMAUInfo,
+    onDismissUsersMAUNotice,
     onClose,
     onCreate,
     onUpdate,
@@ -97,6 +99,40 @@ export function Users(props: State) {
         <Box textAlign="center" m={10}>
           <Indicator />
         </Box>
+      )}
+      {showMAUInfo && (
+        <Alert
+          data-testid="users-not-mau-alert"
+          dismissible
+          onDismiss={onDismissUsersMAUNotice}
+          kind="info"
+          css={`
+            a.external-link {
+              color: ${({ theme }) => theme.colors.buttons.link.default};
+            }
+          `}
+        >
+          Note: The users displayed here are not an accurate reflection of
+          Monthly Active Users (MAU). For example, users who log in through
+          Single Sign-On (SSO) providers such as Okta will only appear here
+          temporarily and disappear once they terminate their active sessions.
+          For more information, read our documentation on{' '}
+          <Link
+            target="_blank"
+            href="https://goteleport.com/docs/usage-billing/#monthly-active-users"
+            className="external-link"
+          >
+            MAU
+          </Link>{' '}
+          and{' '}
+          <Link
+            href="https://goteleport.com/docs/reference/user-types/"
+            className="external-link"
+          >
+            User Types
+          </Link>
+          .
+        </Alert>
       )}
       {attempt.isFailed && <Alert kind="danger" children={attempt.message} />}
       {attempt.isSuccess && (

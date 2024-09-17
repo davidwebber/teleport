@@ -152,7 +152,7 @@ export function AwsOidc() {
           AWS RDS
         </RouteLink>{' '}
         instances during resource enrollment.
-        <P>
+        <Box mt={3}>
           AWS Resources created by the integration are tagged so that you can
           search and export them using the{' '}
           <Link target="_blank" href={AWS_RESOURCE_GROUPS_TAG_EDITOR_LINK}>
@@ -173,7 +173,7 @@ export function AwsOidc() {
               },
             ]}
           />
-        </P>
+        </Box>
       </Box>
 
       <Validation>
